@@ -9,10 +9,7 @@ public class NetworkUtil {
 	/** 检查是否有网络 */
 	public static boolean isNetworkAvailable(Context context) {
 		NetworkInfo info = getNetworkInfo(context);
-		if (info != null) {
-			return info.isAvailable();
-		}
-		return false;
+		return info != null && info.isAvailable();
 	}
 
 	/** 检查是否是WIFI */
