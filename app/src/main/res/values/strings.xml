@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">HealthCare</string>
+    <string name="cloudSerSend_activity">CloudSerSend</string>
+    <string name="register_activity">Register</string>
+    <string name="forgetpsd_activity">ForgetPsd</string>
+    <string name="DocSend_activity">DocSend</string>
+    <string name="DocSendBtn">Doctor</string>
+</resources>
