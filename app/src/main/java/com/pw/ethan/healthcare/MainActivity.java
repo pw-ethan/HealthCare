@@ -24,7 +24,7 @@ public class MainActivity extends Activity implements OnClickListener {
     private String IP = "";
     private String PORT = "";
 
-    private EditText et_email, et_pass;
+    private EditText et_email, et_pass, et_port;
     private String email, psd;
     private Button mLoginButton, mLoginError, mRegister;
     private Client user;
@@ -38,6 +38,7 @@ public class MainActivity extends Activity implements OnClickListener {
         setContentView(R.layout.activity_main);
         et_email = findViewById(R.id.email);
         et_pass = findViewById(R.id.password);
+        et_port = findViewById(R.id.editText);
 
         mLoginButton = findViewById(R.id.login);
         mLoginError = findViewById(R.id.forget_psd);
@@ -45,14 +46,18 @@ public class MainActivity extends Activity implements OnClickListener {
         mLoginButton.setOnClickListener(this);
         mLoginError.setOnClickListener(this);
         mRegister.setOnClickListener(this);
+
+        IP = "219.216.65.174";
+        PORT = et_port.getText().toString();
+
+        user = new Client(this.getApplicationContext(), socketListener);
+        user.open(IP, Integer.valueOf(PORT));
     }
 
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.login:
-                IP = "219.216.65.101";
-                PORT = "60002";
                 email = et_email.getText().toString();
                 psd = et_pass.getText().toString();
 
@@ -67,19 +72,18 @@ public class MainActivity extends Activity implements OnClickListener {
                     new AlertDialog.Builder(this)
                             .setTitle("Login Result")
                             .setMessage("Failed : the format of email is wrong!")
-                            .setPositiveButton("OK", null)
+                            .setPositiveButton("I know.", null)
                             .show();
                 } else {
                     JSONObject sign_in_info = new JSONObject();
                     try {
-                        sign_in_info.put("type", "sign_up");
+                        sign_in_info.put("type", "sign_in");
                         sign_in_info.put("username", email);
                         sign_in_info.put("password", psd);
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
-                    user = new Client(this.getApplicationContext(), socketListener);
-                    user.open(IP, Integer.valueOf(PORT));
+
                     Packet packet = new Packet();
                     packet.pack(sign_in_info.toString());
                     user.send(packet);
@@ -94,34 +98,38 @@ public class MainActivity extends Activity implements OnClickListener {
         public void onSocketResponse(final String txt) {
             runOnUiThread(new Runnable() {
                 public void run() {
-                    JudgeLoginResult(txt);
+                    ProcessResponse(txt);
                 }
             });
         }
     };
 
     //
-    public void JudgeLoginResult(String respond) {
-        Log.i(TAG, "recv: " + respond);
-        user.close();
+    public void ProcessResponse(String strResponse) {
         try {
-            JSONObject resp = new JSONObject(respond);
-            if (resp.getString("type").equals("reply_sign_in") && resp.getInt("state_code") == 0) {
+            JSONObject response = new JSONObject(strResponse);
+            if (response.getString("type").equals("reply_sign_in") && response.getInt("state_code") == 0) {
                 Bundle bundle = new Bundle();
                 bundle.putString("IP", IP);
                 bundle.putString("PORT", PORT);
-                Intent intent = new Intent(MainActivity.this, CloudSerSendActivity.class);
+                Intent intent = new Intent(MainActivity.this, RCUInteractionActivity.class);
                 intent.putExtras(bundle);
                 startActivity(intent);
             } else {
                 new AlertDialog.Builder(this)
                         .setTitle("Login Result")
-                        .setMessage("Failed : the cloud error\n Error code : " + resp.getInt("state_code"))
-                        .setPositiveButton("I know", null)
+                        .setMessage("Failed : The error code : " + response.getInt("state_code"))
+                        .setPositiveButton("I know.", null)
                         .show();
             }
         } catch (JSONException e) {
             e.printStackTrace();
+        } finally {
+            // it works???
+            Packet packet = new Packet();
+            packet.pack("exit");
+            user.send(packet);
+            user.close();
         }
     }
 }
