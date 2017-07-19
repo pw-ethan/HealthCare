@@ -2,7 +2,6 @@ package com.pw.ethan.healthcare;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -47,14 +46,15 @@ public class MainActivity extends Activity implements OnClickListener {
         mLoginError.setOnClickListener(this);
         mRegister.setOnClickListener(this);
 
-        IP = "219.216.65.174";
-        PORT = et_port.getText().toString();
+
     }
 
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.login:
+                IP = "219.216.64.180";
+                PORT = et_port.getText().toString();
                 user = new Client(this.getApplicationContext(), socketListener);
                 user.open(IP, Integer.valueOf(PORT));
 
@@ -87,7 +87,6 @@ public class MainActivity extends Activity implements OnClickListener {
                     Packet packet = new Packet();
                     packet.pack(sign_in_info.toString());
                     user.send(packet);
-                    Log.i(TAG, "send: " + sign_in_info.toString());
                 }
                 break;
         }
@@ -106,16 +105,20 @@ public class MainActivity extends Activity implements OnClickListener {
 
     //
     public void ProcessResponse(String strResponse) {
+        Log.i(TAG, "recv: " + strResponse);
         try {
             JSONObject response = new JSONObject(strResponse);
             if (response.getString("type").equals("reply_sign_in") && response.getInt("state_code") == 0) {
-                Bundle bundle = new Bundle();
-                bundle.putString("IP", IP);
-                bundle.putString("PORT", PORT);
-                Intent intent = new Intent(MainActivity.this, RCUInteractionActivity.class);
-                intent.putExtras(bundle);
-                startActivity(intent);
-            } else {
+//                Bundle bundle = new Bundle();
+//                bundle.putString("IP", IP);
+//                bundle.putString("PORT", PORT);
+//                Intent intent = new Intent(MainActivity.this, RCUInteractionActivity.class);
+//                intent.putExtras(bundle);
+//                startActivity(intent);
+            } else if (response.getString("type").equals("sign_in")) {
+                SendExit();
+            }
+            else {
                 new AlertDialog.Builder(this)
                         .setTitle("Login Result")
                         .setMessage("Failed : The error code : " + response.getInt("state_code"))
@@ -124,12 +127,13 @@ public class MainActivity extends Activity implements OnClickListener {
             }
         } catch (JSONException e) {
             e.printStackTrace();
-        } finally {
-            // it works???
-            Packet packet = new Packet();
-            packet.pack("exit");
-            user.send(packet);
-            user.close();
         }
+    }
+
+    private void SendExit() {
+        Packet packet = new Packet();
+        packet.pack("exit".toString());
+        user.send(packet);
+        user.close();
     }
 }

@@ -44,14 +44,15 @@ public class Client {
         Connect();
     }
 
-    private synchronized void Connect() {
+    private void Connect() {
         conn = new Thread(new OneRequest());
         conn.start();
     }
 
     public int send(Packet in) {
-        requestQueen.add(in);
+        Log.i(TAG, "send: " + new String(in.getPacket()));
         synchronized (lock) {
+            requestQueen.add(in);
             lock.notifyAll();
         }
         return in.getId();
@@ -148,22 +149,23 @@ public class Client {
 
             try {
                 while (null != outStream) {
-                    Packet item;
-                    while (null != (item = requestQueen.poll())) {
-                        outStream.write(item.getPacket());
-                        outStream.flush();
-
-                        int readIndex = READ_MAX;
-                        BufferedReader bufferedReader = new BufferedReader(
-                                new InputStreamReader(inStream), readIndex);
-                        char[] charArray = new char[readIndex];
-                        int read_rst = bufferedReader.read(charArray);
-                        String respond = new String(charArray, 0, read_rst);
-                        bufferedReader.close();
-                        respListener.onSocketResponse(respond);
-                    }
                     synchronized (lock) {
-                        lock.wait();
+                        Packet item = requestQueen.poll();
+                        if (null != item) {
+                            outStream.write(item.getPacket());
+                            outStream.flush();
+
+                            int readIndex = READ_MAX;
+                            BufferedReader bufferedReader = new BufferedReader(
+                                    new InputStreamReader(inStream), readIndex);
+                            char[] charArray = new char[readIndex];
+                            int read_rst = bufferedReader.read(charArray);
+                            String respond = new String(charArray, 0, read_rst);
+                            bufferedReader.close();
+                            respListener.onSocketResponse(respond);
+                        } else {
+                            lock.wait();
+                        }
                     }
                 }
             } catch (Exception e) {

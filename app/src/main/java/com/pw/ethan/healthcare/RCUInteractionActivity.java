@@ -8,22 +8,24 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.widget.EditText;
 
 
 import com.pw.ethan.lib.service.Client;
 import com.pw.ethan.lib.service.ISocketResponse;
 import com.pw.ethan.lib.service.Packet;
 import com.pw.ethan.lib.util.NativeKitUtil;
+import com.pw.ethan.lib.vtree.VerifierTree;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 
-public class CloudSerSendActivity extends Activity {
 
+public class RCUInteractionActivity extends Activity {
+
+    private VerifierTree vtree = null;
     private Client user = null;
-    private EditText sendContent;
     private String IP = "";
     private String PORT = "";
 
@@ -34,17 +36,16 @@ public class CloudSerSendActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_cloudsersendactivity);
 
-        Bundle bundle = this.getIntent().getExtras();
-        IP = bundle.getString("IP");
-        PORT = bundle.getString("PORT");
-
         findViewById(R.id.send).setOnClickListener(listener);
         findViewById(R.id.hash).setOnClickListener(listener);
 
-        sendContent = findViewById(R.id.sendContent);
-
-
+        Bundle bundle = this.getIntent().getExtras();
+        IP = bundle.getString("IP");
+        PORT = bundle.getString("PORT");
         user = new Client(this.getApplicationContext(), socketListener);
+        user.open(IP, Integer.valueOf(PORT));
+
+        vtree = new VerifierTree();
     }
 
     private ISocketResponse socketListener = new ISocketResponse() {
@@ -53,7 +54,7 @@ public class CloudSerSendActivity extends Activity {
         public void onSocketResponse(final String txt) {
             runOnUiThread(new Runnable() {
                 public void run() {
-                    JudgeRegisterResult(txt);
+                    ProcessResponse(txt);
                 }
             });
         }
@@ -64,40 +65,44 @@ public class CloudSerSendActivity extends Activity {
         public void onClick(View v) {
             switch (v.getId()) {
                 case R.id.send:
-                    JSONObject json = new JSONObject();
+                    JSONObject append_elements_info = new JSONObject();
                     try {
-                        json.put("type", "append_elements");
-                        json.put("element", 12);
-                        json.put("root", "xxx");
-                    } catch (JSONException e) {
+                        if (vtree.IsFull()) {
+                            vtree.updateVTree(getWeights(vtree.getDepth()));
+                        }
+                        vtree.appendValue(1);
+
+                        int root = vtree.getEvidence();
+
+                        append_elements_info.put("type", "append_elements");
+                        append_elements_info.put("element", 1);
+                        append_elements_info.put("root", root);
+                    } catch (Exception e) {
                         e.printStackTrace();
                     }
 
                     Packet packet = new Packet();
-                    packet.pack(json.toString());
-
-                    user.open(IP, Integer.valueOf(PORT));
+                    packet.pack(append_elements_info.toString());
                     user.send(packet);
                     break;
+
                 case R.id.hash:
-                    Log.i(TAG, "onClick: hash");
-                    //sendContent.setText(NativeKitUtil.StringFromJNI());
                     Log.i(TAG, "c++: " + NativeKitUtil.StringFromJNI());
                     break;
             }
         }
     };
 
-    public void JudgeRegisterResult(String respond) {
+    public void ProcessResponse(String strResponse) {
         try {
-            JSONObject resp = new JSONObject(respond);
-            if (resp.getString("type").equals("reply_sign_in") && resp.getInt("state_code") == 0) {
-                sendContent.setText(sendContent.getText() + "\nresult : " + respond);
+            JSONObject response = new JSONObject(strResponse);
+            if (response.getString("type").equals("append_elements")) {
+                Log.i(TAG, "recv: " + strResponse);
             } else {
                 new AlertDialog.Builder(this)
-                        .setTitle("Login Result")
-                        .setMessage("Failed : the cloud error\n Error code : " + resp.getInt("state_code"))
-                        .setPositiveButton("I know", null)
+                        .setTitle("Append Result")
+                        .setMessage("Failed : The error code : " + response.getInt("state_code"))
+                        .setPositiveButton("I know.", null)
                         .show();
             }
         } catch (JSONException e) {
@@ -105,22 +110,26 @@ public class CloudSerSendActivity extends Activity {
         }
     }
 
-    //客户自己发送信息与否是自己控制的，所以在这里如果返回的话就不必在开着后台的进程，直接杀死即可
-//	public boolean onKeyDown ( int keyCode, KeyEvent event){
-//		if (keyCode == KeyEvent.KEYCODE_BACK) {
-//			user.close();
-//			android.os.Process.killProcess(android.os.Process.myPid());
-//		}
-//		return super.onKeyDown(keyCode, event);
-//	}
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if ((keyCode == KeyEvent.KEYCODE_BACK)) {
             Intent mHomeIntent = new Intent(Intent.ACTION_MAIN);
             mHomeIntent.addCategory(Intent.CATEGORY_HOME);
             mHomeIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                     | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-            CloudSerSendActivity.this.startActivity(mHomeIntent);
+            RCUInteractionActivity.this.startActivity(mHomeIntent);
         }
         return true;
+    }
+
+    private ArrayList<Integer> getWeights(int n) {
+        ArrayList<Integer> weights = new ArrayList<>();
+        for (int i = 0; i < PowerTwo(n); ++i) {
+            weights.add(i + 1);
+        }
+        return weights;
+    }
+
+    private int PowerTwo(int n) {
+        return 1 << n;
     }
 }
