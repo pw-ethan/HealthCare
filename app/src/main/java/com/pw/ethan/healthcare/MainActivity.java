@@ -49,15 +49,15 @@ public class MainActivity extends Activity implements OnClickListener {
 
         IP = "219.216.65.174";
         PORT = et_port.getText().toString();
-
-        user = new Client(this.getApplicationContext(), socketListener);
-        user.open(IP, Integer.valueOf(PORT));
     }
 
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.login:
+                user = new Client(this.getApplicationContext(), socketListener);
+                user.open(IP, Integer.valueOf(PORT));
+
                 email = et_email.getText().toString();
                 psd = et_pass.getText().toString();
 
