@@ -55,7 +55,7 @@ public class VerifierTree {
 
         depth += 1;
 
-        print();
+//        print();
         return true;
     }
 
@@ -70,7 +70,7 @@ public class VerifierTree {
         }
         evidence.set(evidence.size() - 1, evidence.get(evidence.size() - 1) + valueAdd2Evidence);
         size += 1;
-        print();
+//        print();
         return true;
     }
 
@@ -114,7 +114,7 @@ public class VerifierTree {
         return evidence.get(evidence.size() - 1);
     }
 
-    public void print() {
+    private void print() {
         Log.i(TAG, "capacity : " + capacity + "\n    size : " + size + "\n   depth : " + depth);
         StringBuilder sb = new StringBuilder();
         sb.append("evidence: ");
