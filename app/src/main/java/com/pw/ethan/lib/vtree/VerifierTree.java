@@ -110,9 +110,9 @@ public class VerifierTree {
         return depth;
     }
 
-//    public int getEvidence() {
-//        return evidence.get(evidence.size() - 1);
-//    }
+    public int getEvidence() {
+        return evidence.get(evidence.size() - 1);
+    }
 
     public void print() {
         Log.i(TAG, "capacity : " + capacity + "\n    size : " + size + "\n   depth : " + depth);
