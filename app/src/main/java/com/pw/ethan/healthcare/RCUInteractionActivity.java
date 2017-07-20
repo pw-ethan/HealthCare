@@ -34,7 +34,7 @@ public class RCUInteractionActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_cloudsersendactivity);
+        setContentView(R.layout.activity_rcuinteraction);
 
         findViewById(R.id.send).setOnClickListener(listener);
         findViewById(R.id.hash).setOnClickListener(listener);
