@@ -19,12 +19,12 @@ public class Client {
     private int PORT = 0;
 
     private Socket socket = null;
-    private OutputStream outStream = null;
-    private InputStream inStream = null;
+//    private OutputStream outStream = null;
+//    private InputStream inStream = null;
 
     private Thread conn = null;
-    private Thread send = null;
-    private Thread rec = null;
+//    private Thread send = null;
+//    private Thread rec = null;
 
     private Context context;
     private ISocketResponse respListener;
@@ -60,6 +60,16 @@ public class Client {
 
     public synchronized void close() {
         try {
+            if (null != conn && conn.isAlive()) {
+                conn.interrupt();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            conn = null;
+        }
+
+        try {
             try {
                 if (null != socket) {
                     socket.close();
@@ -70,55 +80,46 @@ public class Client {
                 socket = null;
             }
 
-            try {
-                if (null != outStream) {
-                    outStream.close();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                outStream = null;
-            }
+//            try {
+//                if (null != outStream) {
+//                    outStream.close();
+//                }
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            } finally {
+//                outStream = null;
+//            }
+//
+//            try {
+//                if (null != inStream) {
+//                    inStream.close();
+//                }
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            } finally {
+//                inStream = null;
+//            }
 
-            try {
-                if (null != inStream) {
-                    inStream.close();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                inStream = null;
-            }
 
-            try {
-                if (null != conn && conn.isAlive()) {
-                    conn.interrupt();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                conn = null;
-            }
-
-            try {
-                if (null != send && send.isAlive()) {
-                    send.interrupt();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                send = null;
-            }
-
-            try {
-                if (null != rec && rec.isAlive()) {
-                    rec.interrupt();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                rec = null;
-            }
+//            try {
+//                if (null != send && send.isAlive()) {
+//                    send.interrupt();
+//                }
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            } finally {
+//                send = null;
+//            }
+//
+//            try {
+//                if (null != rec && rec.isAlive()) {
+//                    rec.interrupt();
+//                }
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            } finally {
+//                rec = null;
+//            }
             requestQueen.clear();
         } catch (Exception e) {
             e.printStackTrace();
@@ -138,42 +139,48 @@ public class Client {
             }
             //Log.i(TAG, "OneRequest - connect OK");
 
-            try {
-                outStream = socket.getOutputStream();
-                inStream = socket.getInputStream();
-            } catch (IOException e) {
-                Log.e(TAG, "OneRequest - get stream; " + e.getMessage());
-                e.printStackTrace();
-            }
+//            try {
+//                outStream = socket.getOutputStream();
+//                inStream = socket.getInputStream();
+//            } catch (IOException e) {
+//                Log.e(TAG, "OneRequest - get stream; " + e.getMessage());
+//                e.printStackTrace();
+//            }
             //Log.i(TAG, "OneRequest - get stream; OK");
 
-            try {
-                while (null != outStream) {
+
+            while (socket != null) {
+                try {
+                    Packet item;
                     synchronized (lock) {
-                        Packet item = requestQueen.poll();
+                        item = requestQueen.poll();
+
                         if (null != item) {
-                            outStream.write(item.getPacket());
-                            outStream.flush();
+                            if (socket.isInputShutdown() || socket.isOutputShutdown()) {
+                                Log.e(TAG, "shutdown");
+                            }
+                            OutputStream os = socket.getOutputStream();
+                            os.write(item.getPacket());
+                            os.flush();
 
                             int readIndex = READ_MAX;
                             BufferedReader bufferedReader = new BufferedReader(
-                                    new InputStreamReader(inStream), readIndex);
+                                    new InputStreamReader(socket.getInputStream()), readIndex);
                             char[] charArray = new char[readIndex];
                             int read_rst = bufferedReader.read(charArray);
                             String respond = new String(charArray, 0, read_rst);
-                            bufferedReader.close();
                             respListener.onSocketResponse(respond);
                         } else {
                             lock.wait();
                         }
                     }
+                } catch (InterruptedException ie) {
+                    Log.i(TAG, "OneRequest - send & recv; InterruptedException");
+                } catch (Exception e) {
+                    Log.e(TAG, "OneRequest - send & recv; " + e.getMessage());
+                    e.printStackTrace();
                 }
-            } catch (Exception e) {
-                Log.e(TAG, "OneRequest - send & recv; " + e.getMessage());
-                e.printStackTrace();
             }
-
-            Log.i(TAG, "OneRequest -- End.");
         }
     }
 
