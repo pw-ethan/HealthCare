@@ -5,7 +5,6 @@ import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -14,22 +13,31 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class Client {
 
-    private final int READ_MAX = 4096;
-    private String IP = "";
-    private int PORT = 0;
 
-    private Socket socket = null;
 //    private OutputStream outStream = null;
 //    private InputStream inStream = null;
 
-    private Thread conn = null;
+
 //    private Thread send = null;
 //    private Thread rec = null;
+
+
+    private final int READ_MAX = 4096;
+    private String IP = "";
+    private int PORT = 0;
+    private Socket socket = null;
+
+    private Thread conn = null;
 
     private Context context;
     private ISocketResponse respListener;
     private LinkedBlockingQueue<Packet> requestQueen = new LinkedBlockingQueue<>();
     private final Object lock = new Object();
+
+    private final int OPEN = 0;
+    private final int CLOSED = 1;
+
+    private int SOCKET_STATUS = CLOSED;
 
     private final String TAG = "HealthCare";//"no";
 
@@ -58,10 +66,15 @@ public class Client {
         return in.getId();
     }
 
-    public synchronized void close() {
+    public void close() {
         try {
             if (null != conn && conn.isAlive()) {
-                conn.interrupt();
+                synchronized (lock) {
+                    SOCKET_STATUS = CLOSED;
+                    lock.notifyAll();
+                }
+                conn.join();
+                //conn.interrupt();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -80,46 +93,6 @@ public class Client {
                 socket = null;
             }
 
-//            try {
-//                if (null != outStream) {
-//                    outStream.close();
-//                }
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            } finally {
-//                outStream = null;
-//            }
-//
-//            try {
-//                if (null != inStream) {
-//                    inStream.close();
-//                }
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            } finally {
-//                inStream = null;
-//            }
-
-
-//            try {
-//                if (null != send && send.isAlive()) {
-//                    send.interrupt();
-//                }
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            } finally {
-//                send = null;
-//            }
-//
-//            try {
-//                if (null != rec && rec.isAlive()) {
-//                    rec.interrupt();
-//                }
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            } finally {
-//                rec = null;
-//            }
             requestQueen.clear();
         } catch (Exception e) {
             e.printStackTrace();
@@ -133,26 +106,19 @@ public class Client {
             socket = new Socket();
             try {
                 socket.connect(new InetSocketAddress(IP, PORT), 15 * 1000);
+                synchronized (lock) {
+                    SOCKET_STATUS = OPEN;
+                }
             } catch (IOException e) {
                 Log.e(TAG, "OneRequest - connect: " + e.getMessage());
                 e.printStackTrace();
             }
             //Log.i(TAG, "OneRequest - connect OK");
+            synchronized (lock) {
+                while (socket != null && SOCKET_STATUS == OPEN) {
+                    try {
+                        Packet item;
 
-//            try {
-//                outStream = socket.getOutputStream();
-//                inStream = socket.getInputStream();
-//            } catch (IOException e) {
-//                Log.e(TAG, "OneRequest - get stream; " + e.getMessage());
-//                e.printStackTrace();
-//            }
-            //Log.i(TAG, "OneRequest - get stream; OK");
-
-
-            while (socket != null) {
-                try {
-                    Packet item;
-                    synchronized (lock) {
                         item = requestQueen.poll();
 
                         if (null != item) {
@@ -173,12 +139,12 @@ public class Client {
                         } else {
                             lock.wait();
                         }
+                    } catch (InterruptedException ie) {
+                        Log.i(TAG, "OneRequest - send & recv; InterruptedException");
+                    } catch (Exception e) {
+                        Log.e(TAG, "OneRequest - send & recv; " + e.getMessage());
+                        e.printStackTrace();
                     }
-                } catch (InterruptedException ie) {
-                    Log.i(TAG, "OneRequest - send & recv; InterruptedException");
-                } catch (Exception e) {
-                    Log.e(TAG, "OneRequest - send & recv; " + e.getMessage());
-                    e.printStackTrace();
                 }
             }
         }
