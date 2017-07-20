@@ -2,6 +2,7 @@ package com.pw.ethan.healthcare;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -53,7 +54,7 @@ public class MainActivity extends Activity implements OnClickListener {
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.login:
-                IP = "219.216.64.180";
+                IP = "219.216.65.174";
                 PORT = et_port.getText().toString();
                 user = new Client(this.getApplicationContext(), socketListener);
                 user.open(IP, Integer.valueOf(PORT));
@@ -109,14 +110,15 @@ public class MainActivity extends Activity implements OnClickListener {
         try {
             JSONObject response = new JSONObject(strResponse);
             if (response.getString("type").equals("reply_sign_in") && response.getInt("state_code") == 0) {
-//                Bundle bundle = new Bundle();
-//                bundle.putString("IP", IP);
-//                bundle.putString("PORT", PORT);
-//                Intent intent = new Intent(MainActivity.this, RCUInteractionActivity.class);
-//                intent.putExtras(bundle);
-//                startActivity(intent);
-            } else if (response.getString("type").equals("sign_in")) {
                 SendExit();
+            } else if(response.getString("type").equals("reply_exit") && response.getInt("state_code") == 0) {
+                user.close();
+                Bundle bundle = new Bundle();
+                bundle.putString("IP", IP);
+                bundle.putString("PORT", PORT);
+                Intent intent = new Intent(MainActivity.this, RCUInteractionActivity.class);
+                intent.putExtras(bundle);
+                startActivity(intent);
             }
             else {
                 new AlertDialog.Builder(this)
@@ -131,9 +133,15 @@ public class MainActivity extends Activity implements OnClickListener {
     }
 
     private void SendExit() {
+        JSONObject exit_info = new JSONObject();
+        try {
+            exit_info.put("type", "exit");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
         Packet packet = new Packet();
-        packet.pack("exit".toString());
+        packet.pack(exit_info.toString());
         user.send(packet);
-        user.close();
     }
 }
