@@ -2,6 +2,10 @@ package com.pw.ethan.lib.vtree;
 
 import android.util.Log;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.LinkedList;
 
@@ -139,6 +143,38 @@ public class VerifierTree {
 
     private int PowerTwo(int n) {
         return 1 << n;
+    }
+
+    public String serialize() {
+        JSONObject tree = new JSONObject();
+        try {
+            tree.put("capacity", capacity);
+            tree.put("size", size);
+            tree.put("depth", depth);
+
+            JSONArray jevidence = new JSONArray();
+            for (Integer i : evidence) {
+                jevidence.put(i);
+            }
+            tree.put("evidence", jevidence);
+
+            // here
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+//        sb = new StringBuilder("tree structure :\n");
+//
+//        for (ArrayList<Integer> tmp : vtree) {
+//            for (Integer i : tmp) {
+//                sb.append(i);
+//                sb.append("\t");
+//            }
+//            sb.append("\n");
+//        }
+
+
+        return tree.toString();
     }
 
 }
